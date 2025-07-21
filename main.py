@@ -2,7 +2,6 @@ import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 import alpaca
-
 from alpaca.data import StockTradesRequest
 from alpaca.data.historical.option import OptionHistoricalDataClient,OptionLatestQuoteRequest 
 from alpaca.data.historical import StockHistoricalDataClient 
@@ -15,8 +14,8 @@ trade_client = TradingClient(api_key=os.getenv("api_key"),secret_key=os.getenv("
 stock_data_client = StockHistoricalDataClient(api_key=os.getenv("api_key"), secret_key=os.getenv("secret_key"))
 option_data_client = OptionHistoricalDataClient(api_key=os.getenv("api_key"), secret_key=os.getenv("secret_key"))
 
+# ACCOUNT INFORMATION
 acct = trade_client.get_account()
-
 print(f"Account ID: {acct.account_number}")
 print(f"Account buying power: {acct.buying_power}")
 print(f"Options approved level: {acct.options_approved_level}")

@@ -1,14 +1,17 @@
 import pandas as pd
 #import pandas_ta as ta
 from backtesting import Backtest, Strategy
+import optuna
+
 
 ## GETTING / FORMATTING DATASET
-df = pd.read_csv('Datasets/Brent_Crude_Oil.csv')
-df["Date"] = pd.to_datetime(df["Date"])
-df.set_index("Date", inplace=True)
-print(df.head())
+df = pd.read_csv('crypto_data_latest.csv')
+df.rename(columns={"open": "Open", "high": "High", "low": "Low", "close": "Close", "volume": "Volume"}, inplace=True)
+df.drop(columns=["vwap", "trade_count","symbol"], inplace=True)
 
-#df.ffill(inplace=True)
+#df["Date"] = pd.to_datetime(df["Date"])
+#df.set_index("Date", inplace=True)
+print(df.head())
 df.dropna(inplace=True)
 
 
@@ -38,8 +41,8 @@ def RelativeStrengthIndex(price, period=14):
 
 # STRATEGIES
 class SMACross(Strategy):
-    n_short = 7
-    n_long = 25
+    n_short = 10
+    n_long = 50
 
     def init(self):
         #close = self.data.Close
@@ -55,8 +58,6 @@ class SMACross(Strategy):
             if self.ma_short[-1]  <  self.ma_long[-1]:
                 if self.position:
                     self.position.close()
-
-            #self.sell()
 
 class RSI(Strategy):
     n = 7
@@ -89,8 +90,17 @@ class BB(Strategy):
             if self.position:
                 self.position.close()
 
-# RUNNING BACKTESTS       
-bt = Backtest(df, BB, cash=10000, commission=0, exclusive_orders=True)
-output = bt.run()
-print(output)
-bt.plot()
+#OPTIMIZATION objectives
+def objective(trial):
+    n_short = trial.suggest_int('n_short', 5, 60)
+    n_long = trial.suggest_int('n_long', n_short+1, 480)
+
+    bt = Backtest(df, SMACross, cash=1000000000, commission=0)
+    output = bt.run(n_short=n_short, n_long=n_long)
+    return output['Return [%]']
+
+
+# OPTIMIZATION Start
+study = optuna.create_study(direction='maximize', sampler=optuna.samplers.TPESampler(seed=42))
+study.optimize(objective, n_trials=10)
+print("Best parameters:", study.best_params)
