@@ -8,6 +8,8 @@ import optuna
 df = pd.read_csv('crypto_data_latest.csv')
 df.rename(columns={"open": "Open", "high": "High", "low": "Low", "close": "Close", "volume": "Volume"}, inplace=True)
 df.drop(columns=["vwap", "trade_count","symbol"], inplace=True)
+df["timestamp"] = pd.to_datetime(df["timestamp"])
+df.set_index("timestamp", inplace=True)
 
 #df["Date"] = pd.to_datetime(df["Date"])
 #df.set_index("Date", inplace=True)
@@ -97,10 +99,24 @@ def objective(trial):
 
     bt = Backtest(df, SMACross, cash=1000000000, commission=0)
     output = bt.run(n_short=n_short, n_long=n_long)
-    return output['Return [%]']
+    return output['Calmar Ratio']
 
 
 # OPTIMIZATION Start
-study = optuna.create_study(direction='maximize', sampler=optuna.samplers.TPESampler(seed=42))
-study.optimize(objective, n_trials=10)
-print("Best parameters:", study.best_params)
+def start():
+    study = optuna.create_study(direction='maximize', sampler=optuna.samplers.TPESampler(seed=42))
+    study.optimize(objective, n_trials=100)
+
+    print("###################")
+    print("Best parameters:", study.best_params)
+    print("Best value:", study.best_value)
+
+
+    bt = Backtest(df, SMACross, cash=100000, commission=0)
+    result = bt.run(n_short=study.best_params['n_short'], n_long=study.best_params['n_long'])
+    print(result)
+    return study.best_params
+
+
+def get_best_params():
+    return start()
