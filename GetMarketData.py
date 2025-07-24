@@ -22,7 +22,7 @@ crypto_request = CryptoBarsRequest(
     end=datetime.now()
 )
 
-# Fetch quotes 
+# Fetch bars
 crypto_df = crypto_historic_client.get_crypto_bars(crypto_request).df
 print(crypto_df.head())
 print(crypto_df.tail())

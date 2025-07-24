@@ -3,18 +3,31 @@ import pandas as pd
 from backtesting import Backtest, Strategy
 import optuna
 
+df = pd.DataFrame()
 
-## GETTING / FORMATTING DATASET
-df = pd.read_csv('crypto_data_latest.csv')
-df.rename(columns={"open": "Open", "high": "High", "low": "Low", "close": "Close", "volume": "Volume"}, inplace=True)
-df.drop(columns=["vwap", "trade_count","symbol"], inplace=True)
-df["timestamp"] = pd.to_datetime(df["timestamp"])
-df.set_index("timestamp", inplace=True)
+def format_data():
+    global df
+    ## GETTING / FORMATTING DATASET
+    df = pd.read_csv('crypto_data_latest.csv')
+    df.rename(columns={"open": "Open", "high": "High", "low": "Low", "close": "Close", "volume": "Volume"}, inplace=True)
+    df.drop(columns=["vwap", "trade_count","symbol"], inplace=True)
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df.set_index("timestamp", inplace=True)
 
-#df["Date"] = pd.to_datetime(df["Date"])
-#df.set_index("Date", inplace=True)
-print(df.head())
-df.dropna(inplace=True)
+    ## FRACTIONALISE
+    factor = 10000
+    df["Open"] = df["Open"] / factor
+    df["High"] = df["High"] / factor
+    df["Low"] = df["Low"] / factor
+    df["Close"] = df["Close"] / factor
+    df["Volume"] = df["Volume"] * factor 
+
+    #df["Date"] = pd.to_datetime(df["Date"])
+    #df.set_index("Date", inplace=True)
+    print(df.head())
+    df.dropna(inplace=True)
+
+    return df
 
 
 # INDICATORS
@@ -52,6 +65,11 @@ class SMACross(Strategy):
         self.ma_long = self.I(ExponentialMovingAverage, self.data.Close, self.n_long)
 
     def next(self):
+       # price = self.data.Close[-1]
+        #allocation = 0.25
+        #cash_to_use = self.cash * allocation
+        #size = cash_to_use / price
+
         if self.ma_short[-2] < self.ma_long[-2]:
             if self.ma_short[-1] > self.ma_long[-1]:
                 self.buy()
@@ -94,16 +112,18 @@ class BB(Strategy):
 
 #OPTIMIZATION objectives
 def objective(trial):
-    n_short = trial.suggest_int('n_short', 5, 60)
-    n_long = trial.suggest_int('n_long', n_short+1, 480)
+    n_short = trial.suggest_int('n_short', 5, 15)
+    n_long = trial.suggest_int('n_long', n_short+1, 30)
 
-    bt = Backtest(df, SMACross, cash=1000000000, commission=0)
+    bt = Backtest(df, SMACross, cash=100000, commission=0)
     output = bt.run(n_short=n_short, n_long=n_long)
     return output['Calmar Ratio']
 
 
 # OPTIMIZATION Start
 def start():
+    df = format_data()
+
     study = optuna.create_study(direction='maximize', sampler=optuna.samplers.TPESampler(seed=42))
     study.optimize(objective, n_trials=100)
 
@@ -120,3 +140,4 @@ def start():
 
 def get_best_params():
     return start()
+
