@@ -70,8 +70,9 @@ def calculate_SMA(short, long, position_size):
                 curr_qty = get_current_btc_qty()
                 sell_crypto("BTC/USD", float(curr_qty-0.000001))
                 position_open = False
-                
-    
+    else:
+        print(f"no change short sma: {short_sma.iloc[-1]}, long sma {long_sma.iloc[-1]}")
+
 def get_current_btc_qty():
     btc_usd_position = trading_client.get_open_position(symbol_or_asset_id="BTCUSD")
     return float(btc_usd_position.qty_available)
@@ -127,7 +128,7 @@ async def handle_bar(bar):
     print("NEW BAR ADDED")
     #print(df.tail())
 
-    calculate_SMA(params['n_short'], params['n_long'], 0.4)
+    calculate_SMA(params['n_short'], params['n_long'], 0.1)
     '''
     if position_open:
         curr_qty = get_current_btc_qty()
